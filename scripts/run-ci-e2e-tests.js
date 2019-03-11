@@ -73,6 +73,7 @@ try {
     }
   }
 
+  // temporarily skip this, if this works
   if (exec('yarn pack').code) {
     echo('Failed to pack react-native');
     exitCode = 1;
@@ -85,6 +86,7 @@ try {
     tryExecNTimes(
       () => {
         exec('sleep 10s');
+        echo(`EXECUTING: react-native init EndToEndTest --version ${PACKAGE}`);
         return exec(`react-native init EndToEndTest --version ${PACKAGE}`).code;
       },
       numberOfRetries,
@@ -123,9 +125,16 @@ try {
     echo('Downloading Maven deps');
     exec('./gradlew :app:copyDownloadableDepsToLibs');
     cd('..');
-    exec(
-      'keytool -genkey -v -keystore android/keystores/debug.keystore -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US"',
-    );
+
+    if (
+      exec(
+        'keytool -genkey -v -keystore android/keystores/debug.keystore -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US"',
+      )
+    ) {
+      echo('Key could not be generated');
+      exitCode = 1;
+      throw Error(exitCode);
+    }
 
     echo(`Starting appium server, ${APPIUM_PID}`);
     const appiumProcess = spawn('node', ['./node_modules/.bin/appium']);
